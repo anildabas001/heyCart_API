@@ -3,20 +3,35 @@ const mongoose = require('mongoose');
 const categorySchema = new mongoose.Schema({
    name: {
         type: String,
-        required: [true, 'Please provide the name of the category'],
+        required: [true, 'Category must have a name'],
         unique: true,
-        lowercase: true
+        lowercase: true,
+        minLength: 1,
+        trim: true
    },
    title: {
        type: String,
-       required: [true, 'Please provide the title of the category'],
-       lowercase: true
+       required: [true, 'Category must have a title'],
+       lowercase: true,
+       minLength: 1,
+       trim: true
    },
    parentCategory: {
        type: String,
-       lowercase: true
+       lowercase: true,
+       trim: true
    }   
-},{toJSON: true, toObject: true});
+},{toJSON: {virtuals: true, 
+    transform: function(doc, ret) {
+        ret.id = ret._id;
+        delete ret._id;
+  }}, 
+  toObject: {virtuals: true,
+    transform: function(doc, ret) {
+        ret.id = ret._id;
+        delete ret._id;
+   }
+}});
 
 categorySchema.virtual('path').get(function() {
     if(this.parentCategory) {
@@ -24,8 +39,7 @@ categorySchema.virtual('path').get(function() {
     }
     else {
         return `${this.name}`;
-    }
-    
+    }    
 })
 
 const category = mongoose.model('category', categorySchema);

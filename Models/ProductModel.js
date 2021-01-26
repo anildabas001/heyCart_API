@@ -1,19 +1,26 @@
 const mongoose = require('mongoose');
 const category = require('../Models/CategoryModel');
+const OperationalError = require('../utility/OperationalError');
 
-const productSchema = new mongoose.Schema({
+const productSchema = new mongoose.Schema({   
     name: {
-        type: String,
-        required: [true, 'Please provide the name of the product']
+        type: String,        
+        unique: true,
+        required: [true, 'Product must have valid name'],
+        minLength: 1,
+        trim: true,
     },
     description: {
         type: String,
-        required: [true, 'Please provide the description of the product']
+        required: [true, 'Product must have description'],
+        minLength: 1,
+        trim: true,
     },
     mrp: {
         value: {
             type: Number,
-            required: [true, 'Please provide the value in mrp']
+            required: [true, 'Product must have mrp value'],
+            min: [0, 'minimum mrp value must be more than 0']
         },
         symbol: {
             type: String,
@@ -22,7 +29,8 @@ const productSchema = new mongoose.Schema({
     },
     price: {
         value: {
-            type: Number
+            type: Number,
+            min: 0
         },
         symbol: {
             type: String,
@@ -31,65 +39,107 @@ const productSchema = new mongoose.Schema({
     },
     brand: {
         type: String,
-        required: ['Please provide the brand name of the product']
+        required: ['Product must have a brand'],
+        minLength: 1,
+        trim: true
     },
     ratingsAverage: {
         type: Number,
         min: [0,'Average ratings must not be less than 0'],
         max: [5,'Average ratings must not be more than 5']
     },
-    categories: [
-        {
-            type: [String],
-            lowercase: true
-        }
-    ],
-    images:[
-        {
-            type: String,
-            required: [true, 'please enter the image details']
-        }        
-    ],
+    categories: {
+            type: [String], 
+            validate: {
+                validator: function(value) {return Array.isArray(value) && value.length > 0;},
+                message: 'product categories must not be empty'
+            }            
+    },
+    images:{
+        type: [String],
+        validate: {
+            validator: function(value) {return Array.isArray(value) && value.length > 0;},
+            message: 'product images must not be empty'
+        } 
+    },
     primaryImage: {
         type: String,
-        required: [true, 'please enter the primary image']
+        required: [true, 'Product must have a primary image'],
+        validate: {
+            validator: function(value) {
+                if(!this.images.find(img => img === value)){
+                    return false;
+                }
+                    else {
+                        return true;
+                    }
+            },
+            message: 'primary Image must be in images list'
+        }
     },
     quantity: {
         value: {
             type: Number,
-            required: [true, 'please enter the quantity value of the product']
+            required: [true, 'Product must have quantity value']
         },
         unit: {
-            type: Number,
-            required: [true, 'please enter the quantity unit of the product']
+            type: String,
+            required: [true, 'Product must have quantity unit'],
+            minLength: 1,
+            trim: true
         }
     },
-    variants: [
-        {
-            type: ObjectId,
-            ref: 'product'
-        }
-    ],
+    variants: {
+            type: [String],
+            ref: 'product',
+            validate: {
+                validator: function(value) {
+                    if(!value && mongoose.Types.ObjectId.isValid(value)) {
+                        return flase;
+                    }    
+                    else{
+                        return true;
+                    }                
+                },
+                message: 'Variants must have valid values'
+            }
+    },
     organic: {
+        lowercase: true,
         type: String,
-        enum:['yes','No'],
+        enum:['yes','no'],
         default: 'NA'
     },
     foodPreferance: {
+        lowercase: true,
         type: String,
-        enum:['Vegetarian','Non-Vegitarian, vegan'],
-        equired: [true, 'please enter the food preferance of the product']
+        enum:['vegetarian','non-vegitarian', 'vegan'],
+        required: [true, 'Product must have food preferance']
     },
     stockQuantity: {
         type: Number,
         min:0,       
-        required: [true, 'Please provide the number of products in stock'],
+        required: [true, 'Product must have stock quantity'],
     },
     purchaseLimit: {
      type: Number,
      min: 1
+    },
+    createdAt:{
+        type: Date,
+        default: Date.now
     }
-},{toJSON: true, toObject: true});
+},{toJSON: {virtuals: true, 
+    transform: function(doc, ret) {
+        ret.id = ret._id;
+        delete ret._id;
+  }}, 
+  toObject: {virtuals: true,
+    transform: function(doc, ret) {
+        ret.id = ret._id;
+        delete ret._id;
+   }
+}});
 
 productSchema.pre('save', function(next) {
     if(!this.price.value) {
@@ -98,24 +148,38 @@ productSchema.pre('save', function(next) {
     next();
 });
 
+productSchema.pre(/find^/, function(doc) {
+    console.log(doc);
+    
+});
+
 productSchema.virtual('discount').get(function() {
     if(this.price.value !== this.mrp.value) {
         return (this.mrp.value - this.price.value)* 100/ this.mrp.value;
     }
+    else {
+        return null;
+    }
 })
 
 productSchema.pre('save', function(next) {
-    this.categories.forEach(cat => {
-        category.find({name: cat.toLowerCase()})
-        .then(data=> {
-            if(data.length) {
-                next();
-            }
-            else{
-                throw new Error('product category does not exist in the category list')
-            }
-        })
-    });
+    if(Array.isArray(this.categories) && this.categories.length > 0) {
+        this.categories.forEach(cat => {
+            category.find({name: cat.toLowerCase()})
+            .then(data=> {
+                if(data.length) {
+                    next();
+                }
+                else{
+                    next(new OperationalError('Invalid Data', 400, 'fail','product category does not exist in the category list'));
+                }
+            })
+        });
+    }
+    else {
+        next(new OperationalError('Invalid Data', 400, 'fail','product category must not be empty'));
+    }
+    
 });
 
 const product = mongoose.model('product', productSchema);
