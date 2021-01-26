@@ -89,13 +89,15 @@ const productSchema = new mongoose.Schema({
             trim: true
         }
     },
-    variants: {
-            type: [String],
+    variants: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
             ref: 'product',
             validate: {
                 validator: function(value) {
-                    if(!value && mongoose.Types.ObjectId.isValid(value)) {
-                        return flase;
+                    console.log(!(value && mongoose.Types.ObjectId.isValid(value)));
+                    if(!(value && mongoose.Types.ObjectId.isValid(value))) {
+                        return false;
                     }    
                     else{
                         return true;
@@ -103,7 +105,8 @@ const productSchema = new mongoose.Schema({
                 },
                 message: 'Variants must have valid values'
             }
-    },
+        }
+    ],
     organic: {
         lowercase: true,
         type: String,
@@ -142,15 +145,19 @@ const productSchema = new mongoose.Schema({
 }});
 
 productSchema.pre('save', function(next) {
-    if(!this.price.value) {
+    if(!this.price.value) { 
         this.price.value = this.mrp.value;
     }
     next();
 });
 
-productSchema.pre(/find^/, function(doc) {
-    console.log(doc);
-    
+productSchema.pre(/^find/, function(next) {    
+    this.find().populate({
+        path: 'variants'
+        // Get friends of friends - populate the 'friends' array for every friend
+        });
+    next();
+
 });
 
 productSchema.virtual('discount').get(function() {
@@ -162,7 +169,7 @@ productSchema.virtual('discount').get(function() {
     }
 })
 
-productSchema.pre('save', function(next) {
+productSchema.pre('save', function(next) {    
     if(Array.isArray(this.categories) && this.categories.length > 0) {
         this.categories.forEach(cat => {
             category.find({name: cat.toLowerCase()})

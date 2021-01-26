@@ -2,7 +2,12 @@ const product = require('../Models/ProductModel');
 const CatchAsync = require('../utility/CatchAsync');
 
 module.exports.getProducts = CatchAsync(async(req, res, next) => {
-    const productList = product.find({});
+    const productList = await product.find();
+    
+    res.status(200).json({
+        status: 'success',
+        data: productList
+    });
 });
 
 module.exports.addProduct = CatchAsync(async(req, res, next) => {
