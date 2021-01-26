@@ -129,8 +129,8 @@ const productSchema = new mongoose.Schema({
      min: 1
     },
     createdAt:{
-        type: Date,
-        default: Date.now
+        type: String,
+        default: new Date(Date.now()).toUTCString()
     }
 },{toJSON: {virtuals: true, 
     transform: function(doc, ret) {
@@ -141,20 +141,14 @@ const productSchema = new mongoose.Schema({
     transform: function(doc, ret) {
         ret.id = ret._id;
         delete ret._id;
-   }
-}});
-
-productSchema.pre('save', function(next) {
-    if(!this.price.value) { 
-        this.price.value = this.mrp.value;
-    }
-    next();
+   }},
+   collation: { locale: 'en', strength: 2 }
 });
 
 productSchema.pre(/^find/, function(next) {    
     this.find().populate({
-        path: 'variants'
-        // Get friends of friends - populate the 'friends' array for every friend
+        path: 'variants',
+        select: {name: 1, quantity: 1, mrp: 1, price: 1, discount: 1, id: 1, variants: 0}
         });
     next();
 
@@ -170,6 +164,10 @@ productSchema.virtual('discount').get(function() {
 })
 
 productSchema.pre('save', function(next) {    
+    if(!this.price.value) { 
+        this.price.value = this.mrp.value;
+    }
+
     if(Array.isArray(this.categories) && this.categories.length > 0) {
         this.categories.forEach(cat => {
             category.find({name: cat.toLowerCase()})

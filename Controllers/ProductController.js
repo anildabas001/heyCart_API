@@ -1,9 +1,11 @@
 const product = require('../Models/ProductModel');
 const CatchAsync = require('../utility/CatchAsync');
+const ApiFeature = require('../utility/ApiFeature');
 
 module.exports.getProducts = CatchAsync(async(req, res, next) => {
-    const productList = await product.find();
-    
+
+    const apiFilters = new ApiFeature(product.find({}), req.query);
+    const productList = await apiFilters.filter(); 
     res.status(200).json({
         status: 'success',
         data: productList
