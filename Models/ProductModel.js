@@ -67,6 +67,7 @@ const productSchema = new mongoose.Schema({
         required: [true, 'Product must have a primary image'],
         validate: {
             validator: function(value) {
+                console.log(this);
                 if(!this.images.find(img => img === value)){
                     return false;
                 }
@@ -128,6 +129,10 @@ const productSchema = new mongoose.Schema({
      type: Number,
      min: 1
     },
+    discountPercentage: {
+        type: Number,
+        default: 0
+    },
     createdAt:{
         type: String,
         default: new Date(Date.now()).toUTCString()
@@ -136,11 +141,13 @@ const productSchema = new mongoose.Schema({
     transform: function(doc, ret) {
         ret.id = ret._id;
         delete ret._id;
+        delete ret.createdAt;
   }}, 
   toObject: {virtuals: true,
     transform: function(doc, ret) {
         ret.id = ret._id;
         delete ret._id;
+        delete ret.createdAt;
    }},
    collation: { locale: 'en', strength: 2 }
 });
@@ -154,18 +161,21 @@ productSchema.pre(/^find/, function(next) {
 
 });
 
-productSchema.virtual('discount').get(function() {
-    if(this.price.value !== this.mrp.value) {
-        return (this.mrp.value - this.price.value)* 100/ this.mrp.value;
-    }
-    else {
-        return null;
-    }
-})
+// productSchema.virtual('discount').get(function() {
+//     if(this.price.value !== this.mrp.value) {
+//         return (this.mrp.value - this.price.value)* 100/ this.mrp.value;
+//     }
+//     else {
+//         return null;
+//     }
+// })
 
 productSchema.pre('save', function(next) {    
     if(!this.price.value) { 
         this.price.value = this.mrp.value;
+    }
+    else {
+        this.discountPercentage = (this.mrp.value - this.price.value)* 100/ this.mrp.value;
     }
 
     if(Array.isArray(this.categories) && this.categories.length > 0) {

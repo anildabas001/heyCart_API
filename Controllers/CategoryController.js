@@ -1,10 +1,59 @@
-const product = require('../Models/CategoryModel');
+const category = require('../Models/CategoryModel');
+const catchAsync = require('../utility/CatchAsync');
+const ApiFeature = require('../utility/ApiFeature');
+const { findByIdAndUpdate } = require('../Models/CategoryModel');
 
 
-module.exports.addCategory = (req, res, next) => {
-    console.log(new Date("Tue, 26 Jan 2021 18:07:22 GMT"));
-    console.log(req.body);
-    product.create(req.body).then(data=>{       
-        res.json(data);
-    }).catch(err=> console.log(err))    
-} 
+module.exports.addCategory = catchAsync(async(req, res, next) => {
+    const body = req.body;
+    const addedCategory = await category.create({
+        name: body.name,
+        title: body.title,
+        parentCategory: body.parentCategory        
+    });
+    return res.status(201).json({
+        status: 'success',
+        data: addedCategory
+    }); 
+});
+
+module.exports.getCategories = catchAsync(async(req, res, next) => {
+    const apiFilters = new ApiFeature(category.find({}), req.query);
+    const categoryList = await apiFilters.filter().select().sort().paginate().executeQuery(); 
+    
+    res.status(200).json({
+        status: 'success',
+        data: categoryList
+    });   
+});
+
+module.exports.getCategory = catchAsync(async(req, res, next) => {
+    const id = req.params.id;
+    const apiFilters = new ApiFeature(category.find({_id: id}), req.query);
+    const singleCategory = await apiFilters.select().sort().executeQuery();
+
+    res.status(200).json({
+        status: 'success',
+        data: singleCategory
+    });
+});
+
+module.exports.updateCategory = catchAsync(async(req, res, next) => {
+    const id = req.params.id;
+    const updatedCategory =  await category.findByIdAndUpdate(id, req.body, {runValidators: true, new: true});
+
+    res.status(200).json({
+        status: 'success',
+        data: updatedCategory
+    });
+});
+
+module.exports.deleteCategory = catchAsync(async(req, res, next) => {
+    const id = req.params.id;
+    const deleted = await category.findByIdAndDelete(id);
+    
+    res.status(204).json({
+        status: 'success',
+        data: null
+    });   
+});

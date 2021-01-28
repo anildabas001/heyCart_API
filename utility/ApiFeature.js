@@ -1,5 +1,6 @@
 class ApiFeature {
     constructor(query, queryString) {
+        console.log(queryString);
         this.query = query;
         this.queryString = queryString;
     }
@@ -16,8 +17,13 @@ class ApiFeature {
 
     filter() {
         const filterObj = {...this.queryString};  
-        const filtersExclude = ['select', 'sort', 'limit', 'skip'];
+        const filtersExclude = ['selectFields', 'sortBy', 'limit', 'page'];
         filtersExclude.map(filterValue => {delete filterObj[filterValue];});
+
+        if(filterObj.categories && filterObj.categories.split(',').length > 1) {
+            const categoryElements= filterObj.categories.split(',')
+            filterObj.categories = {$all: categoryElements}
+        }
 
         if(filterObj.search) {
             filterObj.name = {$regex: filterObj.search};
@@ -38,19 +44,40 @@ class ApiFeature {
               
         this.query = this.query.find(filterObj);
 
-        return this.query;
+        return this;
     }
 
-    selectFields() {
+    select() {
+        if(this.queryString.selectFields) {            
+            let selectFields = this.queryString.selectFields;
+            this.query = this.query.select(selectFields.split(',').join(' '));
+        }
 
+        return this;
     }
 
     sort() {
-        price, popularity, alphabetical, discount
+        if(this.queryString.sortBy) {            
+            let sortBy = this.queryString.sortBy;
+            this.query = this.query.sort(sortBy.split(',').join(' '));            
+        }
+
+        return this;
     }
 
     paginate() {
+        if(!isNaN(this.queryString.page)) {
+            const limit = !isNaN(this.queryString.limit) ?  Math.abs(parseInt(this.queryString.limit)) : 10;
+            const page = Math.abs(parseInt(this.queryString.page));
+            const skip = (page -1)*limit;
+            this.query = this.query.skip(skip).limit(limit);
+        }
 
+        return this;
+    }
+
+    executeQuery() {
+        return this.query;
     }
 }
 
