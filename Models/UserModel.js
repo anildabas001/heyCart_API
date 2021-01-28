@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 const userSchema = new mongoose.Schema({
    name: {
@@ -16,21 +18,24 @@ const userSchema = new mongoose.Schema({
        validate: {
            validator: function(value) {
                 var emailRegex = /^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/;
-                return emailRegex.isMatch(value);
+                return emailRegex.test(value);
            },
            message: 'Email must be valid'
-       }
+       },
+       unique: true
    },
    password: {
        type: String,
        required: [true, 'User must have password'],
        min: [6, 'length of password must be at least 6 character long' ],
-       trim: true
+       trim: true,
+       select: false
    },
    role:{
         type: String,
         default: 'Customer',
-        enum: ['Administrator', 'Customer']
+        enum: ['Administrator', 'Customer'],
+        select: false
     },
    confirmPassword: {
         type: String,
@@ -41,22 +46,27 @@ const userSchema = new mongoose.Schema({
             },
             message: 'Confirm Password field must be matching with the password field'
         },
-        trim: true
+        trim: true,
+        select: false
    },
    active: {
        type: Boolean,
-       default: true
+       default: true,
+       select: false
    },
    createdAt: {
         type: String,
-        default: new Date(Date.now()).toUTCString()
+        default: new Date(Date.now()).toUTCString(),
+        select: false
    },
    modifiedAt: {
-        type: String
+        type: String,
+        select: false
    },
    passwordUpdateToken: {
         updateToken: String,
-        expiresAt: String
+        expiresAt: String,
+        select: false
    }
 },{toJSON: {virtuals: true, 
     transform: function(doc, ret) {
@@ -70,7 +80,20 @@ const userSchema = new mongoose.Schema({
    }
 }});
 
+userSchema.methods.verifyPassword = async function(userPassword) {
+    console.log('reached');
+    return await bcrypt.compareSync(userPassword, this.password)
+};
 
+
+userSchema.pre('save', async function(next) {
+    this.confirmPassword = undefined;
+    if(this.password) {
+        this.password = await bcrypt.hash(this.password, Number(process.env['SALT_ROUNDS']));
+    }    
+    
+    next();
+});
 
 const user = mongoose.model('user', userSchema);
 
