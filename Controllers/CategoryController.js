@@ -1,10 +1,10 @@
 const category = require('../Models/CategoryModel');
-const catchAsync = require('../utility/CatchAsync');
+const CatchAsync = require('../utility/CatchAsync');
 const ApiFeature = require('../utility/ApiFeature');
 const { findByIdAndUpdate } = require('../Models/CategoryModel');
 
 
-module.exports.addCategory = catchAsync(async(req, res, next) => {
+module.exports.addCategory = CatchAsync(async(req, res, next) => {
     const body = req.body;
     const addedCategory = await category.create({
         name: body.name,
@@ -17,7 +17,7 @@ module.exports.addCategory = catchAsync(async(req, res, next) => {
     }); 
 });
 
-module.exports.getCategories = catchAsync(async(req, res, next) => {
+module.exports.getCategories = CatchAsync(async(req, res, next) => {
     const apiFilters = new ApiFeature(category.find({}), req.query);
     const categoryList = await apiFilters.filter().select().sort().paginate().executeQuery(); 
     
@@ -27,7 +27,7 @@ module.exports.getCategories = catchAsync(async(req, res, next) => {
     });   
 });
 
-module.exports.getCategory = catchAsync(async(req, res, next) => {
+module.exports.getCategory = CatchAsync(async(req, res, next) => {
     const id = req.params.id;
     const apiFilters = new ApiFeature(category.find({_id: id}), req.query);
     const singleCategory = await apiFilters.select().sort().executeQuery();
@@ -38,7 +38,7 @@ module.exports.getCategory = catchAsync(async(req, res, next) => {
     });
 });
 
-module.exports.updateCategory = catchAsync(async(req, res, next) => {
+module.exports.updateCategory = CatchAsync(async(req, res, next) => {
     const id = req.params.id;
     const updatedCategory =  await category.findByIdAndUpdate(id, req.body, {runValidators: true, new: true});
 
@@ -48,7 +48,7 @@ module.exports.updateCategory = catchAsync(async(req, res, next) => {
     });
 });
 
-module.exports.deleteCategory = catchAsync(async(req, res, next) => {
+module.exports.deleteCategory = CatchAsync(async(req, res, next) => {
     const id = req.params.id;
     const deleted = await category.findByIdAndDelete(id);
     
