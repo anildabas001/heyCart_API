@@ -7,11 +7,13 @@ const categoryRouter  = require('./Routes/CategoryRouter');
 const userRouter  = require('./Routes/UserRouter');
 const OperationalError = require('./utility/OperationalError');
 const globalErrorHandler = require('./ErrorHandler.js/GlobalErrorHandler');
+const {validateAuthentication} = require('./Controllers/AuthenticationController');
 
 const app = express();
 
 app.use(bodyParser.json());
-app.use(cookieParser())
+app.use(cookieParser());
+app.use(validateAuthentication);
 
 const manageQueryString = (req, res, next) => {
     if(req.query) {

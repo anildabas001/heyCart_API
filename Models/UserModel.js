@@ -80,9 +80,8 @@ const userSchema = new mongoose.Schema({
    }
 }});
 
-userSchema.methods.verifyPassword = async function(userPassword) {
-    console.log('reached');
-    return await bcrypt.compareSync(userPassword, this.password)
+userSchema.methods.verifyPassword = function(userPassword) {
+    return bcrypt.compare(userPassword, this.password);
 };
 
 
