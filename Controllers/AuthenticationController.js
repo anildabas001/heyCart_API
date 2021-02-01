@@ -3,7 +3,19 @@ const CatchAsync = require('../utility/CatchAsync');
 const jwt = require('jsonwebtoken');
 const OpeartionalError = require('../utility/OperationalError');
 const { request } = require('../app');
+const mailer = require('../utility/MailSender');
 // const ApiFeature = require('../utility/ApiFeature');
+
+const createMailBody = (targetUser, link) => {
+    return {
+        to: targetUser.email,
+        from: process.env['EMAIL_FROM'],
+        subject: "Password change request",
+        html: `Hi ${targetUser.name} <br> 
+    Please click on the following <a href = ${link}>link</a> to reset your password. <br> 
+    If you did not request this, please ignore this email and your password will remain unchanged.<br> `,
+    };
+}
 
 const sendAuthToken = (res, userEntity) => {
     const authToken = jwt.sign({id: userEntity.id}, process.env['SECURITY_TOKEN_STRING'], {
@@ -134,7 +146,26 @@ module.exports.validateAutherization = (requiredRole) => {
 };  
 
 module.exports.forgetPassword = CatchAsync(async(req, res, next) => {
+    const targetUser = await user.findOne({email: req.body.email});
+    if(targetUser) {
+        const passwordReserttOKEN = targetUser.generateResetToken();
+        targetUser.save();
+        const link = `http://${req.headers.host}/heyCart/api/v1/user/resetPassword/${passwordReserttOKEN}`;
 
+        const mailBody = createMailBody(targetUser, link);
+
+        mailer.sendMail(mailBody).then(data => {
+            res.status(200).send({
+                status: 'success',
+                data: "Email sent to the user with password reset link."
+            })
+        }).catch(err => {
+            throw new OpeartionalError('Mail Not Sent', 500, 'fail', 'not able to send the mail, please check if email is correct');
+        });
+    }
+    else {
+        throw new OpeartionalError('Non Existant', 400, 'fail', 'User does not exist');
+    }
 });
 
 module.exports.logout = CatchAsync(async(req, res, next) => {
@@ -145,7 +176,7 @@ module.exports.logout = CatchAsync(async(req, res, next) => {
 });
 
 module.exports.modifyUser = CatchAsync(async(req, res, next) => {        
-    if(req.query.fiedToModify.toLowerCase() === 'name') {
+    if(req.query.fieldToModify.toLowerCase() === 'name') {
         const modifieduser = await user.findByIdAndUpdate({_id: req.user.id}, {name: req.body.name},{new: true, runValidators:true});        
         return res.status(201).send({
             status: 'success',
@@ -156,9 +187,9 @@ module.exports.modifyUser = CatchAsync(async(req, res, next) => {
         });
     }    
     
-    if(req.query.fiedToModify.toLowerCase() === 'password') {
+    if(req.query.fieldToModify.toLowerCase() === 'password') {
         const userToModify = await user.findOne({_id: req.user.id});
-        if(userToModify.verifyPassword(req.body.password)) {
+        if(!userToModify.verifyPassword(req.body.password)) {
             throw new OpeartionalError('Invalid Password', 400, 'fail' , 'Password must be different from the old password');
         }        
         userToModify.password = req.body.password;

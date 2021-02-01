@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-
+const crypto = require('crypto');
 const userSchema = new mongoose.Schema({
    name: {
         type: String,
@@ -63,11 +63,11 @@ const userSchema = new mongoose.Schema({
         type: String,
         select: false
    },
-   passwordUpdateToken: {
-        updateToken: String,
-        expiresAt: String,
+   passwordReset: {
+        token: String,
+        expiresAt: String, 
         select: false
-   }
+   }   
 },{toJSON: {virtuals: true, 
     transform: function(doc, ret) {
         delete ret.id;
@@ -93,6 +93,14 @@ userSchema.pre('save', async function(next) {
     
     next();
 });
+
+userSchema.methods.generateResetToken = function() {
+    const token = crypto.randomBytes(20).toString('hex');
+    this.passwordReset['token'] = token;
+    this.passwordReset.expiresAt = new Date(Date.now()).toUTCString();
+
+    return token;
+}
 
 const user = mongoose.model('user', userSchema);
 
