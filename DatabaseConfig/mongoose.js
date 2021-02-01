@@ -5,7 +5,8 @@ const connectionString = process.env['DB_CONNECTION_STRING'].replace('<password>
 const dbConnect = mongoose.connect(connectionString, { 
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    useCreateIndex: true
+    useCreateIndex: true,
+    useFindAndModify: false
  });
 
 module.exports = dbConnect;
