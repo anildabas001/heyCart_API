@@ -20,10 +20,15 @@ class ApiFeature {
         const filtersExclude = ['selectFields', 'sortBy', 'limit', 'page'];
         filtersExclude.map(filterValue => {delete filterObj[filterValue];});
 
-        if(filterObj.categories && filterObj.categories.split(',').length > 1) {
-            const categoryElements= filterObj.categories.split(',')
-            filterObj.categories = {$all: categoryElements}
+         if(filterObj.categories && filterObj.categories.split(',').length > 1) {
+             const categoryElements= filterObj.categories.split(',')
+             filterObj.categories = {$in: categoryElements}
         }
+
+        // if(filterObj.categories && filterObj.categories.split(',').length > 1) {
+        //     const categoryElements= filterObj.categories.split(',').join(' ');
+        //     filterObj.categories = categoryElements
+        // }
 
         if(filterObj.search) {
             filterObj.name = {$regex: filterObj.search};
@@ -40,8 +45,6 @@ class ApiFeature {
             filterObj['price.value'] = this.replaceValues(priceObj.price);  
         }
 
-        console.log(filterObj);
-              
         this.query = this.query.find(filterObj);
 
         return this;

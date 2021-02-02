@@ -1,6 +1,16 @@
 const product = require('../Models/ProductModel');
+const category = require('../Models/CategoryModel');
 const CatchAsync = require('../utility/CatchAsync');
 const ApiFeature = require('../utility/ApiFeature');
+
+module.exports.setCategories = CatchAsync(async(req, res, next) => {
+    const parentCategory = req.params.category;
+    const categories = await category.find({parentCategory: parentCategory}, {name: 1});
+    req.query.categories = categories.map(catItem => catItem.name).join(',');
+    
+    next();
+
+});
 
 module.exports.getProducts = CatchAsync(async(req, res, next) => {
     const apiFilters = new ApiFeature(product.find({}), req.query);

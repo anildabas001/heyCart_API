@@ -26,8 +26,10 @@ const createMailBody = (targetUser, link) => {
         from: process.env['EMAIL_FROM'],
         subject: "Password change request",
         html: `Hi ${targetUser.name} <br> 
-    Please click on the following <a href = ${link}>link</a> to reset your password. <br> 
-    If you did not request this, please ignore this email and your password will remain unchanged.<br> `,
+    Please click on the following <a href = ${link}>link</a> to reset your password. <br> <br>
+    If you did not request this, please ignore this email and your password will remain unchanged.<br><br> 
+    Regards, <br>
+    HeyCart`,
     };
 }
 
