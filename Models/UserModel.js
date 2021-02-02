@@ -72,11 +72,13 @@ const userSchema = new mongoose.Schema({
     transform: function(doc, ret) {
         delete ret.id;
         delete ret._id;
+        delete ret.__v;
   }}, 
   toObject: {virtuals: true,
     transform: function(doc, ret) {
         delete ret._id;
         delete ret.id;
+        delete ret.__v;
    }
 }});
 
@@ -86,6 +88,10 @@ userSchema.methods.verifyPassword = function(userPassword) {
 
 
 userSchema.pre('save', async function(next) {
+    if(!this.isModified('password')) { 
+        return next();
+    }
+
     this.confirmPassword = undefined;
     if(this.password) {
         this.password = await bcrypt.hash(this.password, Number(process.env['SALT_ROUNDS']));
@@ -95,10 +101,11 @@ userSchema.pre('save', async function(next) {
 });
 
 userSchema.methods.generateResetToken = function() {
-    const token = crypto.randomBytes(20).toString('hex');
+    const tokenString  = crypto.randomBytes(20).toString('hex');
+    const token = crypto.createHash('sha256').update(tokenString).digest('hex');
     this.passwordReset['token'] = token;
-    this.passwordReset.expiresAt = new Date(Date.now()).toUTCString();
-
+    this.passwordReset['expiresAt'] = new Date(Date.now() + Number(process.env['RESET_TOKEN_EXPIRY'])).toUTCString();
+    
     return token;
 }
 

@@ -4,7 +4,21 @@ const jwt = require('jsonwebtoken');
 const OpeartionalError = require('../utility/OperationalError');
 const { request } = require('../app');
 const mailer = require('../utility/MailSender');
+const { find } = require('../Models/UserModel');
 // const ApiFeature = require('../utility/ApiFeature');
+
+const updatePassword = async (res, userToModify, password, confirmPassword) => {
+
+    if(await userToModify.verifyPassword(password)) {
+        throw new OpeartionalError('Invalid Password', 400, 'fail' , 'Password must be different from the old password');
+    }        
+    userToModify.password = password;
+    userToModify.confirmPassword = confirmPassword;
+    userToModify.modifiedAt = new Date(Date.now()).toUTCString();
+    const modifieduser = await userToModify.save();
+    
+    sendAuthToken(res, modifieduser);
+}
 
 const createMailBody = (targetUser, link) => {
     return {
@@ -135,7 +149,7 @@ module.exports.validateAutherization = (requiredRole) => {
     const role = requiredRole;
     return CatchAsync(async(req, res, next) => {
         if(req.user) {
-            if(req.user.role === role) {
+            if(req.user.role.toLowerCase() === role.toLowerCase()) {
                 next();
             }
             else {
@@ -177,7 +191,7 @@ module.exports.logout = CatchAsync(async(req, res, next) => {
 
 module.exports.modifyUser = CatchAsync(async(req, res, next) => {        
     if(req.query.fieldToModify.toLowerCase() === 'name') {
-        const modifieduser = await user.findByIdAndUpdate({_id: req.user.id}, {name: req.body.name},{new: true, runValidators:true});        
+        const modifieduser = await user.findByIdAndUpdate({_id: req.user.id}, {name: req.body.name},{new: true, runValidators:true});
         return res.status(201).send({
             status: 'success',
             data: {
@@ -188,22 +202,73 @@ module.exports.modifyUser = CatchAsync(async(req, res, next) => {
     }    
     
     if(req.query.fieldToModify.toLowerCase() === 'password') {
-        const userToModify = await user.findOne({_id: req.user.id});
-        if(!userToModify.verifyPassword(req.body.password)) {
-            throw new OpeartionalError('Invalid Password', 400, 'fail' , 'Password must be different from the old password');
-        }        
-        userToModify.password = req.body.password;
-        userToModify.confirmPassword = req.body.confirmPassword;
-        const modifieduser = await userToModify.save();
-        return res.status(201).send({
-            name: modifieduser.name,
-            email: modifieduser.email
-        })
+        const password = req.body.password;
+        const confirmPassword = req.body.confirmPassword;
+        const userToModify = await user.findOne({_id: req.user.id}, {password: 1, name: 1, email: 1});
+
+        await updatePassword(res, userToModify, password, confirmPassword);
+        // if(await userToModify.verifyPassword(req.body.password)) {
+        //     throw new OpeartionalError('Invalid Password', 400, 'fail' , 'Password must be different from the old password');
+        // }        
+        // userToModify.password = password;
+        // userToModify.confirmPassword = confirmPassword;
+        // userToModify.modifiedAt = new Date(Date.now()).toUTCString();
+        // const modifieduser = await userToModify.save();
+        
+        // sendAuthToken(res, modifieduser);
+
+        // return res.status(201).send({
+        //     name: modifieduser.name,
+        //     email: modifieduser.email
+        // })
     }
 });
 
-module.exports.deactivteUser = CatchAsync(async(req, res, next) => {});
+module.exports.resetPassword = CatchAsync(async(req, res, next) => {
+    const resetToken = req.params.resetToken;
+    const password = req.body.password;
+    const confirmPassword = req.body.confirmPassword;
+    const targetUser = await user.findOne({['passwordReset.token']: resetToken}, {passwordReset: 1, name: 1, email: 1, modifiedAt: 1, password: 1});
 
-module.exports.getUsers = CatchAsync(async(req, res, next) => {console.log('reached');});
+    if(targetUser) {
+        if(new Date(targetUser.passwordReset.expiresAt) > new Date(Date.now())) {
+            await updatePassword(res, targetUser, password, confirmPassword);
+        }
+        else {
+            throw new OpeartionalError('Reset token expiredd', 400, 'fail' , 'Reset Link has expired. Please try again');
+        }
+    }
+    else {
+        throw new OpeartionalError('Invalid User', 400, 'fail' , 'Failed to update the password. Please try again.');
+    }
+});
 
-module.exports.getUser = CatchAsync(async(req, res, next) => {console.log('reached');});
+module.exports.deactivteUser = CatchAsync(async(req, res, next) => {
+    const email = req.params.email;
+    const requestedUser = await findOne({email: email}, {name: 1, email: 1, active: 1});
+    requestedUser.active = 1;
+
+    await requestedUser.save();
+
+    res.status(200).send({
+        status: 'success',
+        data: 'user has been deactivated'
+    });
+});
+
+module.exports.getUsers = CatchAsync(async(req, res, next) => {
+    const users = await find({}, {name: 1, email: 1, active: 1, createdAt: 1, modifiedAt: 1});
+    res.status(200).send({
+        status: 'success',
+        data: users
+    });
+});
+
+module.exports.getUser = CatchAsync(async(req, res, next) => {
+    const email = req.params.email;
+    const requestedUser = await findOne({email: email}, {name: 1, email: 1});
+    res.status(200).send({
+        status: 'success',
+        data: requestedUser
+    });
+});
