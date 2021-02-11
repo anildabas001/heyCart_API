@@ -58,25 +58,26 @@ module.exports.signupUser = CatchAsync(async(req, res, next) => {
     const body = req.body;
     let signupUser;
 
-    try {
-         signupUser = await user.create({
-            name: body.name,
-            email: body.email,
-            password: body.password,
-            confirmPassword: body.confirmPassword
-        });
-    }
-    catch(error) {
-        return res.status(500).json({
-            status: 'error',
-            message: 'Signup failed'
-        });
-    }
+    
+    signupUser = await user.create({
+        name: body.name,
+        email: body.email,
+        password: body.password,
+        confirmPassword: body.confirmPassword
+    });
+    
+    // catch(error) {
+    //     return res.status(500).json({
+    //         status: 'error',
+    //         message: 'Signup failed'
+    //     });
+    //}
     
     sendAuthToken(res, signupUser);    
 });
 
 module.exports.loginUser = CatchAsync(async(req, res, next) => {
+
     const userEmail = req.body.email;
     const userPassword = req.body.password;
 

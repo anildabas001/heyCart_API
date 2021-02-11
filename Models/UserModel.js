@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const OperationalError = require('../utility/OperationalError');
+
 const userSchema = new mongoose.Schema({
    name: {
         type: String,
@@ -88,6 +90,12 @@ userSchema.methods.verifyPassword = function(userPassword) {
 
 
 userSchema.pre('save', async function(next) {
+    const targetUser = await user.findOne({email: this.email});
+    if(targetUser) {
+        var error = new OperationalError('email exists', 400, 'fail', 'Email already exists');
+        return next(error);
+    }
+    
     if(!this.isModified('password')) { 
         return next();
     }

@@ -1,5 +1,5 @@
 const express =  require('express');
-const bodyParser = require('body-parser');
+const bodyParser = require('body-parser');  
 const cookieParser = require('cookie-Parser');
 require('dotenv').config({path: `${__dirname}/config.env`});
 const productRouter  = require('./Routes/ProductRouter');
@@ -8,8 +8,11 @@ const userRouter  = require('./Routes/UserRouter');
 const OperationalError = require('./utility/OperationalError');
 const globalErrorHandler = require('./ErrorHandler.js/GlobalErrorHandler');
 const {validateAuthentication} = require('./Controllers/AuthenticationController');
+var cors = require('cors');
 
 const app = express();
+
+app.use(cors({credentials: true, origin: 'http://localhost:3000'}));
 
 app.use(bodyParser.json());
 app.use(cookieParser());
