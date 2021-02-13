@@ -30,6 +30,12 @@ const productSchema = new mongoose.Schema({
     price: {
         value: {
             type: Number,
+            validate: {
+                validator: function(value) {
+                    return this.mrp.value > value;
+                },
+                message: 'Price must not be greater than mrp'
+            },
             min: 0
         },
         symbol: {
@@ -67,7 +73,6 @@ const productSchema = new mongoose.Schema({
         required: [true, 'Product must have a primary image'],
         validate: {
             validator: function(value) {
-                console.log(this);
                 if(!this.images.find(img => img === value)){
                     return false;
                 }

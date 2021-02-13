@@ -107,8 +107,8 @@ module.exports.validateAuthentication = CatchAsync(async(req, res, next) => {
     if(req.cookies.authToken) {
         const authToken = req.cookies.authToken;
         try {
+            
             data = jwt.verify(authToken, process.env['SECURITY_TOKEN_STRING']);
-
             if(data) {
                 const tokenCreationDate = new Date(data.iat * 1000);
                 const tokenExpiryDate = new Date(data.exp * 1000);

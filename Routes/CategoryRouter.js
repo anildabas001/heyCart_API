@@ -5,10 +5,10 @@ const {protectRoute, validateAutherization} = require('../Controllers/Authentica
 
 const categoryRouter = express.Router();
 
-categoryRouter.route('/').get(getCategories);                        
+categoryRouter.route('/').get(getCategories)
+                         .post(protectRoute, validateAutherization('Administrator'), addCategory);                        
 
-categoryRouter.route('/:id').get(getCategory)
-    .post(protectRoute, validateAutherization('Administrator'), addCategory)
+categoryRouter.route('/:id').get(getCategory)    
     .patch(protectRoute, validateAutherization('Administrator'),updateCategory)
     .delete(protectRoute, validateAutherization('Administrator'),deleteCategory);
 
