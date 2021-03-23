@@ -6,13 +6,17 @@ class ApiFeature {
     }
 
     replaceValues (value) {
-        let stringValue = JSON.stringify(value);        
+        let stringValue = JSON.stringify(value);  
+        let convertedObj = {};
         let convertedValue = JSON.parse(stringValue.replace(/lt|gt|eq/g, (value) => {
             return `$${value}`;
         }));
-
-        isNaN(convertedValue)?Object.keys(convertedValue).forEach(element => convertedValue[element] = +convertedValue[element]): convertedValue = +convertedValue;
-        return convertedValue;
+        
+        convertedValue = convertedValue.split('=');
+        convertedObj[convertedValue[0]] = parseInt(convertedValue[1]);        
+        console.log(convertedObj); 
+        //isNaN(convertedValue)?Object.keys(convertedValue).forEach(element => convertedValue[element] = +convertedValue[element]): convertedValue = +convertedValue;
+        return convertedObj;
     }
 
     filter() {
@@ -20,10 +24,22 @@ class ApiFeature {
         const filtersExclude = ['selectFields', 'sortBy', 'limit', 'page'];
         filtersExclude.map(filterValue => {delete filterObj[filterValue];});
 
-         if(filterObj.categories && filterObj.categories.split(',').length > 1) {
-             const categoryElements= filterObj.categories.split(',')
-             filterObj.categories = {$in: categoryElements}
+        if(filterObj.categories && ! filterObj.subCategories && filterObj.categories.split(',').length > 1) {
+            const categoryElements= filterObj.categories.split(',');
+            filterObj.categories = {$in: categoryElements};
         }
+
+        if(filterObj.brand && filterObj.brand.split(',').length >= 1) {
+            const brandElements= filterObj.brand.split(',');
+            filterObj.brand = {$in: brandElements};
+        }
+
+        if(filterObj.subCategories && filterObj.subCategories.split(',').length >= 1) {
+            const subCategories= filterObj.subCategories.split(',');
+            filterObj.categories = {$in: subCategories};
+            delete filterObj.subCategories;
+        }
+           
 
         // if(filterObj.categories && filterObj.categories.split(',').length > 1) {
         //     const categoryElements= filterObj.categories.split(',').join(' ');
@@ -31,7 +47,7 @@ class ApiFeature {
         // }
 
         if(filterObj.search) {
-            filterObj.name = {$regex: filterObj.search};
+            filterObj.name = { $regex: new RegExp(filterObj.search.toLowerCase(), "i") };
             delete filterObj.search;
         }
 
@@ -44,6 +60,26 @@ class ApiFeature {
             delete filterObj.price;
             filterObj['price.value'] = this.replaceValues(priceObj.price);  
         }
+
+        if(filterObj.price) {   
+            const priceObj = {...filterObj};              
+            delete filterObj.price;
+            filterObj['price.value'] = this.replaceValues(priceObj.price);  
+        }
+
+        if(filterObj.discount) {   
+            var discountValues={};
+            const discountObj = {...filterObj};              
+            delete filterObj.discount;
+            var discounts = discountObj.discount.split(',').map(discount => this.replaceValues(discount));
+             discounts.forEach(discount => {
+                 discountValues = {...discount, ...discountValues}
+             });
+            console.log('lo-----------', discounts)
+            filterObj.discountPercentage= {...discountValues};  
+        }
+
+        console.log(filterObj);
 
         this.query = this.query.find(filterObj);
 

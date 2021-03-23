@@ -16,6 +16,8 @@ app.use(cors({credentials: true, origin: 'http://localhost:3000'}));
 
 app.use(bodyParser.json());
 app.use(cookieParser());
+
+app.use(express.static('public'));
 app.use(validateAuthentication);
 
 const manageQueryString = (req, res, next) => {

@@ -6,8 +6,16 @@ const ApiFeature = require('../utility/ApiFeature');
 module.exports.setCategories = CatchAsync(async(req, res, next) => {
     const parentCategory = req.params.category;
     const categories = await category.find({parentCategory: parentCategory}, {name: 1});
-    req.query.categories = categories.map(catItem => catItem.name).join(',');
-    
+    req.query.categories = categories.map(catItem => catItem.name).join(',');    
+    next();
+
+});
+
+module.exports.setDeals = CatchAsync(async(req, res, next) => {     
+    req.query.discount = 'gt=20';
+    req.query.sortBy = 'discountPercentage';
+    req.query.selectFields = '-description,-primaryImage,-organic,-variants';
+    req.query.limit= '8';    
     next();
 
 });

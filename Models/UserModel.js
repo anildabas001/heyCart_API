@@ -3,6 +3,29 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const OperationalError = require('../utility/OperationalError');
+const product = require('./ProductModel');
+
+var cartProductSchema = mongoose.Schema(
+    {
+        product: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: [true, 'product id is requird'],
+            ref: 'product'
+        },
+        quantity: {
+            type: Number,
+            required: [true, 'quantity of the product is required'],
+            min: 1
+        }
+    }, {toJSON: {virtuals: true, 
+        transform: function(doc, ret) {
+            delete ret._id;
+      }}, 
+      toObject: {virtuals: true,
+        transform: function(doc, ret) {
+            delete ret._id;
+       }
+    }});
 
 const userSchema = new mongoose.Schema({
    name: {
@@ -69,7 +92,18 @@ const userSchema = new mongoose.Schema({
         token: String,
         expiresAt: String, 
         select: false
-   }   
+   },
+   cart: {
+    products:[cartProductSchema],    
+    totalPrice: {
+        type: Number,
+        default: 0
+    },
+    totalQuantity: {
+        type: Number,
+        default: 0
+    }
+   }
 },{toJSON: {virtuals: true, 
     transform: function(doc, ret) {
         delete ret.id;
@@ -103,10 +137,31 @@ userSchema.pre('save', async function(next) {
     this.confirmPassword = undefined;
     if(this.password) {
         this.password = await bcrypt.hash(this.password, Number(process.env['SALT_ROUNDS']));
-    }    
+    }
     
     next();
 });
+
+userSchema.pre('save', async function(next) {
+    if(this.isModified('cart')) {
+        this.cart.totalQuantity = 0;
+        this.cart.totalPrice = 0;
+        const extra = await this.cart.products;
+        for(i = 0; i < this.cart.products.length; i++) {            
+            const productData = await product.findOne({_id: this.cart.products[i].product},{price: 1, stockQuantity: 1});
+
+             if(this.cart.products[i].quantity > productData.stockQuantity) {
+                var error = new OperationalError('quantity exceeded', 400, 'fail', 'Quantity exceeded for the product');
+                return next(error);
+             }    
+
+            this.cart.totalQuantity = this.cart.totalQuantity + Number(this.cart.products[i].quantity); 
+            this.cart.totalPrice = this.cart.totalPrice + (this.cart.products[i].quantity * productData.price.value); 
+        };
+    }   
+    next();
+})
+
 
 userSchema.methods.generateResetToken = function() {
     const tokenString  = crypto.randomBytes(20).toString('hex');

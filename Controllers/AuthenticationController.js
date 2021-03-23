@@ -104,7 +104,7 @@ module.exports.validateAuthentication = CatchAsync(async(req, res, next) => {
     let data;
     let userData;
 
-    if(req.cookies.authToken) {
+    if(req.cookies.authToken) {                
         const authToken = req.cookies.authToken;
         try {
             
@@ -113,8 +113,9 @@ module.exports.validateAuthentication = CatchAsync(async(req, res, next) => {
                 const tokenCreationDate = new Date(data.iat * 1000);
                 const tokenExpiryDate = new Date(data.exp * 1000);
                 const userId = data.id;
-    
+
                 userData = await user.findOne({_id: userId}, {name: 1, email: 1, modifiedAt: 1, createdAt: 1, id: 1, role: 1});
+                
                 req.user = {
                     name: userData.name,
                     id: userData.id,
@@ -134,8 +135,7 @@ module.exports.validateAuthentication = CatchAsync(async(req, res, next) => {
             data = null;
             //throw new OpeartionalError('Invalid Authentication', 400, 'fail', 'Authentication token wrongly modified');
         }            
-    }  
-
+    }     
     next();
 });
 

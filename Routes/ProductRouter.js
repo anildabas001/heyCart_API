@@ -1,10 +1,11 @@
 const express = require('express');
 
-const {setCategories, getProduct,getProducts, addProduct, updateProduct, deleteProduct} = require('../Controllers/ProductController');
+const {setDeals, setCategories, getProduct, getProducts, addProduct, updateProduct, deleteProduct} = require('../Controllers/ProductController');
 const {protectRoute, validateAutherization} = require('../Controllers/AuthenticationController');
 
 const productRouter = express.Router();
 
+productRouter.route('/top-deals').get(setDeals, getProducts)
 productRouter.route('/parent-category/:category').get(setCategories, getProducts)
 productRouter.route('/').get(getProducts)
     .post(protectRoute, validateAutherization('Administrator'), addProduct);
